@@ -51,7 +51,7 @@ export default function AdminLayout() {
                   alt="Flowbite Logo"
                 />
                 <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">
-                  Flowbite
+                  Booksales
                 </span>
               </a>
             </div>
