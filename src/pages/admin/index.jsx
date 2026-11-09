@@ -66,13 +66,13 @@ export default function Dashboard() {
             <div className="relative overflow-hidden rounded-3xl bg-slate-900 p-6 sm:p-8 text-white shadow-xl">
                 <div className="relative z-10 max-w-2xl">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 backdrop-blur-md text-indigo-100 border border-white/20">
-                        BookSales Admin Console
+                        BookSales Admin
                     </span>
                     <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight">
-                        Selamat Datang di Pusat Kontrol Toko Buku
+                        Selamat Datang di Pusat Kontrol Booksales
                     </h1>
                     <p className="mt-2 text-xs sm:text-sm text-indigo-100 leading-relaxed">
-                        Pantau inventaris buku, penulis terdaftar, kategori genre, dan riwayat transaksi toko Anda secara real-time.
+                        Pantau inventaris buku, penulis terdaftar, kategori genre, dan riwayat transaksi toko secara real-time.
                     </p>
 
                     {/* Quick Shortcuts */}
