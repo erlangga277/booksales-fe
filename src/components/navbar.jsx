@@ -29,12 +29,12 @@ export default function Navbar() {
       <nav className="bg-white border-b border-gray-200 px-4 lg:px-6 py-2.5 dark:bg-gray-800 dark:border-gray-700 shadow-sm">
         <div className="flex flex-wrap justify-between items-center mx-auto max-w-screen-xl">
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center">
-            <img
-              src="https://flowbite.com/docs/images/logo.svg"
-              className="mr-3 h-6 sm:h-9"
-              alt="Logo"
-            />
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
             <span className="self-center text-xl font-bold whitespace-nowrap text-indigo-600 dark:text-white">
               BookSales
             </span>
@@ -147,12 +147,28 @@ export default function Navbar() {
                 </Link>
               </li>
               <li>
-                <a
-                  href="#about"
-                  className="block py-2 pr-4 pl-3 text-gray-700 hover:text-indigo-600 lg:p-0 dark:text-gray-400 dark:hover:text-white"
+                <Link
+                  to="/about"
+                  className={`block py-2 pr-4 pl-3 rounded lg:p-0 ${
+                    location.pathname === "/about"
+                      ? "text-indigo-600 font-bold dark:text-white"
+                      : "text-gray-700 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-white"
+                  }`}
                 >
                   Tentang Kami
-                </a>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/contact"
+                  className={`block py-2 pr-4 pl-3 rounded lg:p-0 ${
+                    location.pathname === "/contact"
+                      ? "text-indigo-600 font-bold dark:text-white"
+                      : "text-gray-700 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-white"
+                  }`}
+                >
+                  Kontak
+                </Link>
               </li>
             </ul>
           </div>

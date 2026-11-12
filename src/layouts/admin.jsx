@@ -51,7 +51,7 @@ export default function AdminLayout() {
     },
     {
       to: "/admin/authors",
-      label: "Authors / Penulis",
+      label: "Authors",
       icon: (
         <svg
           aria-hidden="true"
@@ -69,7 +69,7 @@ export default function AdminLayout() {
     },
     {
       to: "/admin/genres",
-      label: "Genres / Kategori",
+      label: "Genres",
       icon: (
         <svg
           aria-hidden="true"
@@ -82,6 +82,35 @@ export default function AdminLayout() {
             d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z"
             clipRule="evenodd"
           ></path>
+        </svg>
+      ),
+    },
+    {
+      to: "/admin/users",
+      label: "Daftar User",
+      icon: (
+        <svg aria-hidden="true" className="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+        </svg>
+      ),
+    },
+    {
+      to: "/admin/transactions",
+      label: "Pesanan Buku",
+      icon: (
+        <svg aria-hidden="true" className="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+          <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
+        </svg>
+      ),
+    },
+    {
+      to: "/admin/messages",
+      label: "Pesan Masuk",
+      icon: (
+        <svg aria-hidden="true" className="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+          <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
         </svg>
       ),
     },
@@ -112,12 +141,12 @@ export default function AdminLayout() {
               </svg>
             </button>
 
-            <Link to="/admin" className="flex items-center justify-between mr-4">
-              <img
-                src="https://flowbite.s3.amazonaws.com/logo.svg"
-                className="mr-3 h-8"
-                alt="Logo"
-              />
+            <Link to="/admin" className="flex items-center gap-2.5 mr-4">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm shrink-0">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
               <span className="self-center text-xl font-bold whitespace-nowrap text-indigo-600 dark:text-white">
                 BookSales Admin
               </span>
@@ -205,8 +234,8 @@ export default function AdminLayout() {
                     to={link.to}
                     onClick={() => setSidebarOpen(false)}
                     className={`flex items-center p-2 text-sm font-medium rounded-lg transition group ${isActive
-                        ? "bg-indigo-50 text-indigo-700 font-bold dark:bg-indigo-900/40 dark:text-indigo-300"
-                        : "text-gray-900 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
+                      ? "bg-indigo-50 text-indigo-700 font-bold dark:bg-indigo-900/40 dark:text-indigo-300"
+                      : "text-gray-900 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
                       }`}
                   >
                     {link.icon}

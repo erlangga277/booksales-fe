@@ -1,29 +1,28 @@
 import api from "../_api/axios";
 
 export const authService = {
-  // 1. Register: Menerima name, email, password, dan role ('customer' | 'admin')
   register: async (payload) => {
     const res = await api.post("/register", payload);
     return res.data;
   },
 
-  // 2. Login: Mengirim email & password, mengembalikan token dan role
   login: async (payload) => {
     const res = await api.post("/login", payload);
     const data = res.data;
 
-    // Simpan token dan role ke localStorage
     if (data.token) {
       localStorage.setItem("token", data.token);
     }
     if (data.role) {
       localStorage.setItem("role", data.role);
     }
+    if (data.user) {
+      localStorage.setItem("user", JSON.stringify(data.user));
+    }
 
     return data;
   },
 
-  // 3. Logout: Menghapus token di server dan di browser
   logout: async () => {
     try {
       await api.post("/logout");
@@ -32,13 +31,24 @@ export const authService = {
     } finally {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
+      localStorage.removeItem("user");
     }
   },
 
-  // Helper auth utilities
   getToken: () => localStorage.getItem("token"),
   getRole: () => localStorage.getItem("role"),
+  getUser: () => {
+    const user = localStorage.getItem("user");
+    try {
+      return user ? JSON.parse(user) : null;
+    } catch {
+      return null;
+    }
+  },
   isAuthenticated: () => !!localStorage.getItem("token"),
   isAdmin: () => localStorage.getItem("role") === "admin",
-  isCustomer: () => localStorage.getItem("role") === "customer",
+  isCustomer: () => {
+    const role = localStorage.getItem("role");
+    return role === "customer" || role === "user";
+  },
 };

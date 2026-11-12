@@ -5,6 +5,7 @@ import { bookService } from "../../../_service/bookService";
 export default function AdminBooks() {
   const navigate = useNavigate();
   const [books, setBooks] = useState([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -12,8 +13,8 @@ export default function AdminBooks() {
   const fetchBooks = async () => {
     try {
       setLoading(true);
-      const data = await bookService.getAll();
-      setBooks(data.data || data);
+      const res = await bookService.getAll();
+      setBooks(Array.isArray(res) ? res : res.data || []);
     } catch (err) {
       console.error("Gagal mengambil data buku:", err);
     } finally {
@@ -37,33 +38,39 @@ export default function AdminBooks() {
       setDeleteId(null);
       fetchBooks();
     } catch (err) {
-      console.error("Gagal menghapus buku:", err);
+      alert("Gagal menghapus buku. Buku mungkin terkait dengan data transaksi.");
     }
   };
 
+  const filteredBooks = books.filter((book) => {
+    const q = search.toLowerCase();
+    const title = book.title?.toLowerCase() || "";
+    const authorName = book.author?.name?.toLowerCase() || "";
+    const genreName = book.genre?.name?.toLowerCase() || "";
+    return title.includes(q) || authorName.includes(q) || genreName.includes(q);
+  });
+
   return (
     <>
-      {/* Modal Konfirmasi Hapus */}
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-sm w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 max-w-sm w-full shadow-2xl">
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-2">
               Konfirmasi Hapus
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Apakah kamu yakin ingin menghapus buku ini? Tindakan ini tidak
-              bisa dibatalkan.
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">
+              Apakah kamu yakin ingin menghapus buku ini? Tindakan ini tidak bisa dibatalkan.
             </p>
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600"
+                className="px-4 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg"
               >
                 Batal
               </button>
               <button
                 onClick={handleDeleteConfirm}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+                className="px-4 py-2 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg"
               >
                 Ya, Hapus
               </button>
@@ -72,108 +79,126 @@ export default function AdminBooks() {
         </div>
       )}
 
-      <section className="bg-gray-50 dark:bg-gray-900 p-3 sm:p-5">
-        <div className="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden">
-          {/* Header: Search + Tombol Tambah */}
-          <div className="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
-            <div className="w-full md:w-1/2">
-              <p className="text-xl font-semibold text-gray-900 dark:text-white">
-                Daftar Buku
-              </p>
-            </div>
-            <div className="w-full md:w-auto flex justify-end">
-              <button
-                onClick={() => navigate("/admin/books/create")}
-                type="button"
-                className="flex items-center justify-center text-white bg-indigo-700 hover:bg-indigo-800 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-indigo-600 dark:hover:bg-indigo-700"
-              >
-                <svg
-                  className="h-3.5 w-3.5 mr-2"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    clipRule="evenodd"
-                    fillRule="evenodd"
-                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                  />
-                </svg>
-                Tambah Buku
-              </button>
-            </div>
+      <div className="p-6 bg-zinc-50 dark:bg-zinc-950 min-h-screen">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+              Kelola Buku
+            </h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+              Total {books.length} judul buku tersedia di katalog
+            </p>
           </div>
 
-          {/* Tabel */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari judul, penulis, genre..."
+              className="w-full sm:w-64 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm rounded-lg px-3.5 py-2 focus:ring-1 focus:ring-indigo-500"
+            />
+            <button
+              onClick={() => navigate("/admin/books/create")}
+              type="button"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition"
+            >
+              + Tambah Buku
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+            <table className="w-full text-sm text-left text-zinc-600 dark:text-zinc-400">
+              <thead className="text-xs uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800/60 text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
                 <tr>
-                  <th className="px-4 py-3">No</th>
-                  <th className="px-4 py-3">Judul</th>
-                  <th className="px-4 py-3">Genre</th>
-                  <th className="px-4 py-3">Author</th>
-                  <th className="px-4 py-3">Harga</th>
-                  <th className="px-4 py-3">Stok</th>
-                  <th className="px-4 py-3">
-                    <span className="sr-only">Aksi</span>
-                  </th>
+                  <th className="px-6 py-3.5">Buku</th>
+                  <th className="px-6 py-3.5">Penulis</th>
+                  <th className="px-6 py-3.5">Genre</th>
+                  <th className="px-6 py-3.5">Harga</th>
+                  <th className="px-6 py-3.5">Stok</th>
+                  <th className="px-6 py-3.5 text-right">Aksi</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                 {loading ? (
                   <tr>
-                    <td
-                      colSpan={7}
-                      className="px-4 py-6 text-center text-gray-400"
-                    >
-                      Memuat data...
+                    <td colSpan="6" className="text-center py-12 text-zinc-400">
+                      Memuat daftar buku...
                     </td>
                   </tr>
-                ) : books.length === 0 ? (
+                ) : filteredBooks.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={7}
-                      className="px-4 py-6 text-center text-gray-400"
-                    >
-                      Belum ada buku.
+                    <td colSpan="6" className="text-center py-12 text-zinc-400">
+                      Tidak ada buku ditemukan.
                     </td>
                   </tr>
                 ) : (
-                  books.map((book, index) => (
+                  filteredBooks.map((book) => (
                     <tr
                       key={book.id}
-                      className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition"
                     >
-                      <td className="px-4 py-3">{index + 1}</td>
-                      <th
-                        scope="row"
-                        className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                      >
-                        {book.title}
-                      </th>
-                      <td className="px-4 py-3">
-                        {book.genre?.name || book.genre_id || "-"}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          {book.cover_photo ? (
+                            <img
+                              src={book.cover_photo}
+                              alt={book.title}
+                              className="w-10 h-14 object-cover rounded shadow-sm border border-zinc-200 dark:border-zinc-700 flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-14 bg-zinc-200 dark:bg-zinc-800 rounded flex items-center justify-center text-[10px] text-zinc-500 flex-shrink-0">
+                              No Img
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-medium text-zinc-900 dark:text-zinc-100 line-clamp-1">
+                              {book.title}
+                            </div>
+                            <div className="text-xs text-zinc-500 line-clamp-1 max-w-xs mt-0.5">
+                              {book.description || "Tidak ada deskripsi"}
+                            </div>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-4 py-3">
-                        {book.author?.name || book.author_id || "-"}
+                      <td className="px-6 py-4">
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                          {book.author?.name || "-"}
+                        </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-6 py-4">
+                        <span className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-700">
+                          {book.genre?.name || "-"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 font-semibold text-zinc-900 dark:text-zinc-100">
                         Rp {Number(book.price).toLocaleString("id-ID")}
                       </td>
-                      <td className="px-4 py-3">{book.stock}</td>
-                      <td className="px-4 py-3 flex items-center justify-end gap-2">
+                      <td className="px-6 py-4">
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                            book.stock > 5
+                              ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50"
+                              : book.stock > 0
+                              ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50"
+                              : "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50"
+                          }`}
+                        >
+                          {book.stock} pcs
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right space-x-3">
                         <button
-                          onClick={() =>
-                            navigate(`/admin/books/${book.id}/edit`)
-                          }
-                          className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium text-sm"
+                          onClick={() => navigate(`/admin/books/${book.id}/edit`)}
+                          className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDeleteClick(book.id)}
-                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 font-medium text-sm"
+                          className="text-xs font-semibold text-red-600 dark:text-red-400 hover:underline"
                         >
                           Hapus
                         </button>
@@ -185,7 +210,7 @@ export default function AdminBooks() {
             </table>
           </div>
         </div>
-      </section>
+      </div>
     </>
   );
 }

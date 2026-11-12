@@ -1,12 +1,20 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { bookService } from "../../../_service/bookService";
+import { transactionService } from "../../../_service/transactionService";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function ShowBook() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [buying, setBuying] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(null);
 
   const getImageUrl = (path) => {
     if (!path) return "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&q=80";
@@ -35,6 +43,36 @@ export default function ShowBook() {
       fetchBookDetail();
     }
   }, [id]);
+
+  const handleBuy = async () => {
+    if (!user) {
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+
+    if (book.stock <= 0) {
+      alert("Maaf, stok buku ini sedang habis.");
+      return;
+    }
+
+    const confirmBuy = window.confirm(
+      `Konfirmasi pemesanan buku "${book.title}" seharga Rp ${Number(book.price).toLocaleString("id-ID")}?`
+    );
+    if (!confirmBuy) return;
+
+    try {
+      setBuying(true);
+      const res = await transactionService.create({
+        book_id: book.id,
+        total_amount: book.price,
+      });
+      setOrderSuccess(res.data || true);
+    } catch (err) {
+      alert(err.response?.data?.message || "Gagal memproses pesanan. Silakan coba lagi.");
+    } finally {
+      setBuying(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -83,7 +121,6 @@ export default function ShowBook() {
   return (
     <section className="py-8 bg-white md:py-16 dark:bg-gray-900 antialiased min-h-screen">
       <div className="max-w-screen-xl px-4 mx-auto 2xl:px-0">
-        {/* Breadcrumb sederhana */}
         <div className="mb-6 flex items-center text-sm text-gray-500 dark:text-gray-400 gap-2">
           <Link to="/" className="hover:text-indigo-600">Home</Link>
           <span>/</span>
@@ -94,8 +131,16 @@ export default function ShowBook() {
           </span>
         </div>
 
+        {orderSuccess && (
+          <div className="mb-6 p-4 rounded-xl bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300">
+            <h4 className="font-semibold text-base mb-1">Pesanan Berhasil Dibuat!</h4>
+            <p className="text-sm">
+              Nomor Pesanan: <span className="font-mono font-bold">{orderSuccess.order_number || "Sukses"}</span>. Admin kami akan segera memproses pengiriman buku Anda.
+            </p>
+          </div>
+        )}
+
         <div className="lg:grid lg:grid-cols-2 lg:gap-12 xl:gap-16 items-start">
-          {/* Cover Buku */}
           <div className="shrink-0 max-w-md mx-auto w-full">
             <div className="overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800 shadow-md border border-gray-200 dark:border-gray-700">
               <img
@@ -110,9 +155,7 @@ export default function ShowBook() {
             </div>
           </div>
 
-          {/* Info Buku */}
           <div className="mt-6 sm:mt-8 lg:mt-0">
-            {/* Genre Badge */}
             {book.genre?.name && (
               <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1 rounded-full dark:bg-indigo-900/40 dark:text-indigo-300 mb-3">
                 {book.genre.name}
@@ -123,7 +166,6 @@ export default function ShowBook() {
               {book.title}
             </h1>
 
-            {/* Author info */}
             <div className="flex items-center gap-3 my-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
               <img
                 src={
@@ -143,21 +185,38 @@ export default function ShowBook() {
               </div>
             </div>
 
-            {/* Harga */}
             <div className="mt-4 sm:items-center sm:gap-4 sm:flex">
               <p className="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400">
                 Rp {Number(book.price || 0).toLocaleString("id-ID")}
               </p>
-              <span className="inline-block mt-2 sm:mt-0 px-3 py-1 text-xs font-medium rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                Tersedia ({book.stock} stok)
+              <span className={`inline-block mt-2 sm:mt-0 px-3 py-1 text-xs font-medium rounded-md ${
+                book.stock > 0
+                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+              }`}>
+                {book.stock > 0 ? `Tersedia (${book.stock} stok)` : "Stok Habis"}
               </span>
             </div>
 
-            {/* Action buttons */}
+            {!user && (
+              <div className="mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between">
+                <span>Silakan login terlebih dahulu untuk melakukan pembelian buku.</span>
+                <Link
+                  to="/login"
+                  state={{ from: location.pathname }}
+                  className="font-bold underline ml-2 shrink-0 hover:text-amber-900 dark:hover:text-amber-200"
+                >
+                  Masuk Sekarang
+                </Link>
+              </div>
+            )}
+
             <div className="mt-6 sm:gap-4 sm:items-center sm:flex sm:mt-8">
               <button
                 type="button"
-                className="w-full sm:w-auto text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm px-6 py-3 flex items-center justify-center gap-2 dark:bg-indigo-600 dark:hover:bg-indigo-700"
+                onClick={handleBuy}
+                disabled={buying || book.stock <= 0}
+                className="w-full sm:w-auto text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm px-6 py-3 flex items-center justify-center gap-2 dark:bg-indigo-600 dark:hover:bg-indigo-700 disabled:opacity-50"
               >
                 <svg
                   className="w-5 h-5"
@@ -172,7 +231,7 @@ export default function ShowBook() {
                     d="M4 4h1.5L8 16m0 0h8m-8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm.75-3H7.5M11 7H6.312M17 4v6m-3-3h6"
                   />
                 </svg>
-                Beli Sekarang
+                {buying ? "Memproses..." : user ? "Beli Sekarang" : "Login untuk Membeli"}
               </button>
 
               <Link
@@ -185,7 +244,6 @@ export default function ShowBook() {
 
             <hr className="my-6 border-gray-200 dark:border-gray-800" />
 
-            {/* Deskripsi */}
             <div>
               <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
                 Sinopsis & Deskripsi
@@ -195,7 +253,6 @@ export default function ShowBook() {
               </p>
             </div>
 
-            {/* Bio Author jika ada */}
             {book.author?.bio && (
               <div className="mt-6 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
