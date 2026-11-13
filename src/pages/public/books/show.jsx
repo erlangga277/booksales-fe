@@ -3,18 +3,22 @@ import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { bookService } from "../../../_service/bookService";
 import { transactionService } from "../../../_service/transactionService";
 import { useAuth } from "../../../context/AuthContext";
+import { useCart } from "../../../context/CartContext";
 
 export default function ShowBook() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { addToCart } = useCart();
 
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [buying, setBuying] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [cartFeedback, setCartFeedback] = useState(false);
 
   const getImageUrl = (path) => {
     if (!path) return "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&q=80";
@@ -44,6 +48,26 @@ export default function ShowBook() {
     }
   }, [id]);
 
+  const handleQuantityChange = (val) => {
+    const nextVal = Number(val);
+    if (isNaN(nextVal) || nextVal < 1) {
+      setQuantity(1);
+      return;
+    }
+    if (book && nextVal > book.stock) {
+      setQuantity(book.stock);
+      return;
+    }
+    setQuantity(nextVal);
+  };
+
+  const handleAddToCart = () => {
+    if (!book || book.stock <= 0) return;
+    addToCart(book, quantity);
+    setCartFeedback(true);
+    setTimeout(() => setCartFeedback(false), 2000);
+  };
+
   const handleBuy = async () => {
     if (!user) {
       navigate("/login", { state: { from: location.pathname } });
@@ -55,8 +79,9 @@ export default function ShowBook() {
       return;
     }
 
+    const totalCost = Number(book.price) * quantity;
     const confirmBuy = window.confirm(
-      `Konfirmasi pemesanan buku "${book.title}" seharga Rp ${Number(book.price).toLocaleString("id-ID")}?`
+      `Konfirmasi pemesanan ${quantity}x "${book.title}" seharga Rp ${totalCost.toLocaleString("id-ID")}?`
     );
     if (!confirmBuy) return;
 
@@ -64,7 +89,8 @@ export default function ShowBook() {
       setBuying(true);
       const res = await transactionService.create({
         book_id: book.id,
-        total_amount: book.price,
+        quantity: quantity,
+        total_amount: totalCost,
       });
       setOrderSuccess(res.data || true);
     } catch (err) {
@@ -211,12 +237,58 @@ export default function ShowBook() {
               </div>
             )}
 
-            <div className="mt-6 sm:gap-4 sm:items-center sm:flex sm:mt-8">
+            {/* Atur Jumlah Pembelian */}
+            <div className="mt-6 p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <label htmlFor="quantity-input" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Jumlah:
+                  </label>
+                  <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                    <button
+                      type="button"
+                      onClick={() => handleQuantityChange(quantity - 1)}
+                      disabled={quantity <= 1 || book.stock <= 0}
+                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-40 transition font-bold"
+                    >
+                      -
+                    </button>
+                    <input
+                      id="quantity-input"
+                      type="number"
+                      min="1"
+                      max={book.stock}
+                      value={quantity}
+                      onChange={(e) => handleQuantityChange(e.target.value)}
+                      disabled={book.stock <= 0}
+                      className="w-14 text-center border-none py-1.5 text-sm dark:bg-gray-800 dark:text-white focus:ring-0 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleQuantityChange(quantity + 1)}
+                      disabled={quantity >= book.stock || book.stock <= 0}
+                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 disabled:opacity-40 transition font-bold"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 block">Subtotal:</span>
+                  <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                    Rp {(Number(book.price || 0) * quantity).toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 sm:gap-4 sm:items-center sm:flex">
               <button
                 type="button"
-                onClick={handleBuy}
-                disabled={buying || book.stock <= 0}
-                className="w-full sm:w-auto text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm px-6 py-3 flex items-center justify-center gap-2 dark:bg-indigo-600 dark:hover:bg-indigo-700 disabled:opacity-50"
+                onClick={handleAddToCart}
+                disabled={book.stock <= 0}
+                className="w-full sm:w-auto text-indigo-600 bg-white border border-indigo-600 hover:bg-indigo-50 focus:ring-4 focus:ring-indigo-100 font-medium rounded-lg text-sm px-6 py-3 flex items-center justify-center gap-2 dark:bg-transparent dark:text-indigo-400 dark:border-indigo-400 dark:hover:bg-indigo-950/40 disabled:opacity-50 transition"
               >
                 <svg
                   className="w-5 h-5"
@@ -228,7 +300,29 @@ export default function ShowBook() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    d="M4 4h1.5L8 16m0 0h8m-8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm.75-3H7.5M11 7H6.312M17 4v6m-3-3h6"
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                {cartFeedback ? "Berhasil Ditambahkan!" : "+ Keranjang"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleBuy}
+                disabled={buying || book.stock <= 0}
+                className="mt-3 sm:mt-0 w-full sm:w-auto text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm px-6 py-3 flex items-center justify-center gap-2 dark:bg-indigo-600 dark:hover:bg-indigo-700 disabled:opacity-50 transition"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
                   />
                 </svg>
                 {buying ? "Memproses..." : user ? "Beli Sekarang" : "Login untuk Membeli"}
@@ -236,9 +330,9 @@ export default function ShowBook() {
 
               <Link
                 to="/books"
-                className="mt-3 sm:mt-0 w-full sm:w-auto inline-flex items-center justify-center px-5 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                className="mt-3 sm:mt-0 w-full sm:w-auto inline-flex items-center justify-center px-5 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition"
               >
-                ← Kembali ke Katalog
+                ← Katalog
               </Link>
             </div>
 
