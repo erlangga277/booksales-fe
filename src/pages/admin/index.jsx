@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../../_api/axios";
 import { genreService } from "../../_service/genreService";
 import { authorService } from "../../_service/authorService";
+import { getImageUrl } from "../../_utils/image";
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
@@ -197,8 +198,12 @@ export default function Dashboard() {
                   <div className="flex items-center gap-3">
                     {b.cover_photo ? (
                       <img
-                        src={b.cover_photo}
+                        src={getImageUrl(b.cover_photo)}
                         alt=""
+                        onError={(e) => {
+                          e.target.src =
+                            "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&q=80";
+                        }}
                         className="w-8 h-10 object-cover rounded"
                       />
                     ) : (

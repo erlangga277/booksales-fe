@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { bookService } from "../../../_service/bookService";
 import { transactionService } from "../../../_service/transactionService";
@@ -9,16 +9,78 @@ export default function ShowBook() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
 
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [buying, setBuying] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState(null);
+  const [orderData, setOrderData] = useState(null);
+  const [snapToken, setSnapToken] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState("pending");
   const [quantity, setQuantity] = useState(1);
   const [cartFeedback, setCartFeedback] = useState(false);
+
+  const storageKey = `pending_payment_book_${id}`;
+
+  const fetchBookDetail = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await bookService.getById(id);
+      setBook(res.data || null);
+    } catch (err) {
+      console.error("Gagal mengambil detail buku:", err);
+      setError("Buku tidak ditemukan atau terjadi kesalahan server.");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  const triggerSnapPay = useCallback((token, order) => {
+    if (!window.snap || !token) return;
+
+    window.snap.pay(token, {
+      onSuccess: async () => {
+        try {
+          if (order?.id) {
+            await transactionService.simulatePaid(order.id);
+          }
+        } catch (err) {
+          console.error("Gagal sinkronisasi status pembayaran:", err);
+        } finally {
+          setPaymentStatus("success");
+          localStorage.removeItem(storageKey);
+          fetchBookDetail();
+        }
+      },
+      onPending: () => {
+        setPaymentStatus("pending");
+      },
+      onError: () => {
+        alert("Pembayaran gagal. Silakan coba kembali.");
+      },
+      onClose: () => {},
+    });
+  }, [storageKey, fetchBookDetail]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.status === "success") {
+          localStorage.removeItem(storageKey);
+        } else if (parsed.order && parsed.token) {
+          setOrderData(parsed.order);
+          setSnapToken(parsed.token);
+          setPaymentStatus(parsed.status || "pending");
+        }
+      } catch {
+        localStorage.removeItem(storageKey);
+      }
+    }
+  }, [storageKey]);
 
   const getImageUrl = (path) => {
     if (!path) return "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600&q=80";
@@ -30,23 +92,10 @@ export default function ShowBook() {
   };
 
   useEffect(() => {
-    const fetchBookDetail = async () => {
-      try {
-        setLoading(true);
-        const res = await bookService.getById(id);
-        setBook(res.data || null);
-      } catch (err) {
-        console.error("Gagal mengambil detail buku:", err);
-        setError("Buku tidak ditemukan atau terjadi kesalahan server.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (id) {
       fetchBookDetail();
     }
-  }, [id]);
+  }, [id, fetchBookDetail]);
 
   const handleQuantityChange = (val) => {
     const nextVal = Number(val);
@@ -62,6 +111,11 @@ export default function ShowBook() {
   };
 
   const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+
     if (!book || book.stock <= 0) return;
     addToCart(book, quantity);
     setCartFeedback(true);
@@ -69,7 +123,7 @@ export default function ShowBook() {
   };
 
   const handleBuy = async () => {
-    if (!user) {
+    if (!isAuthenticated) {
       navigate("/login", { state: { from: location.pathname } });
       return;
     }
@@ -92,12 +146,35 @@ export default function ShowBook() {
         quantity: quantity,
         total_amount: totalCost,
       });
-      setOrderSuccess(res.data || true);
+
+      const responseData = res.data?.data || res.data;
+      const order = responseData?.order || responseData;
+      const token = responseData?.snap_token || order?.snap_token;
+
+      setOrderData(order);
+      setSnapToken(token ?? null);
+      setPaymentStatus("pending");
+
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({ order, token, status: "pending" })
+      );
+
+      if (token) {
+        triggerSnapPay(token, order);
+      }
     } catch (err) {
       alert(err.response?.data?.message || "Gagal memproses pesanan. Silakan coba lagi.");
     } finally {
       setBuying(false);
     }
+  };
+
+  const clearPendingSession = () => {
+    localStorage.removeItem(storageKey);
+    setOrderData(null);
+    setSnapToken(null);
+    setPaymentStatus("pending");
   };
 
   if (loading) {
@@ -157,12 +234,50 @@ export default function ShowBook() {
           </span>
         </div>
 
-        {orderSuccess && (
-          <div className="mb-6 p-4 rounded-xl bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300">
-            <h4 className="font-semibold text-base mb-1">Pesanan Berhasil Dibuat!</h4>
-            <p className="text-sm">
-              Nomor Pesanan: <span className="font-mono font-bold">{orderSuccess.order_number || "Sukses"}</span>. Admin kami akan segera memproses pengiriman buku Anda.
-            </p>
+        {orderData && (
+          <div
+            className={`mb-6 p-5 rounded-2xl border ${
+              paymentStatus === "success"
+                ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
+                : "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200"
+            }`}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-bold text-base mb-1">
+                  {paymentStatus === "success"
+                    ? "Pembayaran Berhasil Dikonfirmasi!"
+                    : "Pesanan Dibuat — Selesaikan Pembayaran"}
+                </h4>
+                <p className="text-sm">
+                  Nomor pesanan:{" "}
+                  <span className="font-mono font-bold">{orderData.order_number}</span>.{" "}
+                  {paymentStatus === "success"
+                    ? "Transaksi Anda telah lunas dan stok buku telah diperbarui."
+                    : "Selesaikan transaksi melalui pop-up Midtrans."}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {paymentStatus !== "success" && snapToken && (
+                  <button
+                    type="button"
+                    onClick={() => triggerSnapPay(snapToken, orderData)}
+                    className="inline-flex items-center gap-2 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 px-4 py-2 rounded-xl transition shadow-sm"
+                  >
+                    Lanjutkan Pembayaran
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={clearPendingSession}
+                  className="text-xs px-3 py-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 underline"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -224,9 +339,9 @@ export default function ShowBook() {
               </span>
             </div>
 
-            {!user && (
+            {!isAuthenticated && (
               <div className="mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between">
-                <span>Silakan login terlebih dahulu untuk melakukan pembelian buku.</span>
+                <span>Silakan login terlebih dahulu untuk menambahkan ke keranjang atau membeli buku.</span>
                 <Link
                   to="/login"
                   state={{ from: location.pathname }}
@@ -325,7 +440,7 @@ export default function ShowBook() {
                     d="M13 10V3L4 14h7v7l9-11h-7z"
                   />
                 </svg>
-                {buying ? "Memproses..." : user ? "Beli Sekarang" : "Login untuk Membeli"}
+                {buying ? "Memproses..." : isAuthenticated ? "Beli Sekarang" : "Login untuk Membeli"}
               </button>
 
               <Link

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { bookService } from "../../../_service/bookService";
+import { getImageUrl } from "../../../_utils/image";
 
 export default function AdminBooks() {
   const navigate = useNavigate();
@@ -144,8 +145,12 @@ export default function AdminBooks() {
                         <div className="flex items-center gap-3">
                           {book.cover_photo ? (
                             <img
-                              src={book.cover_photo}
+                              src={getImageUrl(book.cover_photo)}
                               alt={book.title}
+                              onError={(e) => {
+                                e.target.src =
+                                  "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&q=80";
+                              }}
                               className="w-10 h-14 object-cover rounded shadow-sm border border-zinc-200 dark:border-zinc-700 flex-shrink-0"
                             />
                           ) : (

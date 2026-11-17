@@ -6,7 +6,15 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => authService.getToken());
   const [role, setRole] = useState(() => authService.getRole());
-  const [user, setUser] = useState(() => authService.getUser());
+  const [user, setUser] = useState(() => {
+    const savedUser = authService.getUser();
+    if (savedUser) return savedUser;
+    const currentToken = authService.getToken();
+    if (currentToken) {
+      return { role: authService.getRole() || "customer" };
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(false);
 
   const login = async (credentials) => {
@@ -15,7 +23,7 @@ export function AuthProvider({ children }) {
       const data = await authService.login(credentials);
       setToken(data.token);
       setRole(data.role);
-      setUser(data.user || null);
+      setUser(data.user || { role: data.role });
       return data;
     } finally {
       setLoading(false);

@@ -1,9 +1,32 @@
 import { useEffect, useState } from "react";
 import { transactionService } from "../../../_service/transactionService";
+import { getImageUrl } from "../../../_utils/image";
+
+const STATUS_LABEL = {
+  pending: "Menunggu Bayar",
+  paid: "Lunas",
+  settlement: "Lunas",
+  failed: "Gagal",
+  cancel: "Dibatalkan",
+  expire: "Kedaluwarsa",
+};
+
+const statusBadge = (status) => {
+  const map = {
+    pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+    paid: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400",
+    settlement: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400",
+    failed: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400",
+    cancel: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400",
+    expire: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
+  };
+  return map[status] ?? "bg-zinc-100 text-zinc-500";
+};
 
 export default function AdminTransactions() {
   const [transactions, setTransactions] = useState([]);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   const fetchTransactions = async () => {
@@ -25,25 +48,35 @@ export default function AdminTransactions() {
     try {
       await transactionService.delete(id);
       setTransactions((prev) => prev.filter((item) => item.id !== id));
-    } catch (err) {
+    } catch {
       alert("Gagal menghapus transaksi.");
     }
   };
 
+  const pendingCount = transactions.filter((tx) => tx.status === "pending").length;
+
+  const totalOmset = transactions
+    .filter((tx) => tx.status === "paid" || tx.status === "settlement")
+    .reduce((acc, cur) => acc + Number(cur.total_amount || 0), 0);
+
   const filtered = transactions.filter((tx) => {
     const q = search.toLowerCase();
-    return (
+    const matchSearch =
       (tx.customer?.name || "").toLowerCase().includes(q) ||
       (tx.customer?.email || "").toLowerCase().includes(q) ||
-      (tx.book?.title || "").toLowerCase().includes(q) ||
-      (tx.order_number || "").toLowerCase().includes(q)
-    );
+      (tx.order_number || "").toLowerCase().includes(q);
+    const matchStatus =
+      statusFilter === "all" ||
+      tx.status === statusFilter ||
+      (statusFilter === "paid" && tx.status === "settlement");
+    return matchSearch && matchStatus;
   });
 
-  const totalOmset = transactions.reduce(
-    (acc, cur) => acc + Number(cur.total_amount || 0),
-    0
-  );
+  const TAB_OPTIONS = [
+    { key: "all", label: "Semua" },
+    { key: "pending", label: `Pending${pendingCount > 0 ? ` (${pendingCount})` : ""}` },
+    { key: "paid", label: "Lunas" },
+  ];
 
   return (
     <div className="p-6 bg-zinc-50 dark:bg-zinc-950 min-h-screen">
@@ -53,11 +86,14 @@ export default function AdminTransactions() {
             Pesanan Buku Masuk
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-            Total {transactions.length} pesanan | Akumulasi: Rp{" "}
-            {totalOmset.toLocaleString("id-ID")}
+            {transactions.length} pesanan · Omset lunas: Rp {totalOmset.toLocaleString("id-ID")}
+            {pendingCount > 0 && (
+              <span className="ml-2 text-amber-600 font-semibold dark:text-amber-400">
+                · {pendingCount} menunggu pembayaran
+              </span>
+            )}
           </p>
         </div>
-
         <input
           type="text"
           value={search}
@@ -67,15 +103,32 @@ export default function AdminTransactions() {
         />
       </div>
 
+      <div className="flex gap-2 mb-4">
+        {TAB_OPTIONS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setStatusFilter(tab.key)}
+            className={`text-xs font-semibold px-3.5 py-1.5 rounded-full border transition ${
+              statusFilter === tab.key
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-indigo-400"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left text-zinc-600 dark:text-zinc-400">
             <thead className="text-xs uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800/60 text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800">
               <tr>
                 <th className="px-6 py-3.5">No. Order</th>
+                <th className="px-6 py-3.5">Status</th>
                 <th className="px-6 py-3.5">Pelanggan</th>
                 <th className="px-6 py-3.5">Buku</th>
-                <th className="px-6 py-3.5">Penulis & Genre</th>
+                <th className="px-6 py-3.5">Penulis &amp; Genre</th>
                 <th className="px-6 py-3.5">Total Bayar</th>
                 <th className="px-6 py-3.5">Waktu</th>
                 <th className="px-6 py-3.5 text-right">Aksi</th>
@@ -84,13 +137,13 @@ export default function AdminTransactions() {
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-12 text-zinc-400">
+                  <td colSpan="8" className="text-center py-12 text-zinc-400">
                     Memuat data transaksi...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-12 text-zinc-400">
+                  <td colSpan="8" className="text-center py-12 text-zinc-400">
                     Tidak ada transaksi ditemukan.
                   </td>
                 </tr>
@@ -104,19 +157,26 @@ export default function AdminTransactions() {
                       {tx.order_number}
                     </td>
                     <td className="px-6 py-4">
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusBadge(tx.status)}`}>
+                        {STATUS_LABEL[tx.status] ?? tx.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
                       <div className="font-medium text-zinc-900 dark:text-zinc-100">
                         {tx.customer?.name || "Customer #" + tx.customer_id}
                       </div>
-                      <div className="text-xs text-zinc-500">
-                        {tx.customer?.email || "-"}
-                      </div>
+                      <div className="text-xs text-zinc-500">{tx.customer?.email || "-"}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {tx.book?.cover_photo && (
                           <img
-                            src={tx.book.cover_photo}
+                            src={getImageUrl(tx.book.cover_photo)}
                             alt=""
+                            onError={(e) => {
+                              e.target.src =
+                                "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&q=80";
+                            }}
                             className="w-8 h-10 object-cover rounded shadow-sm flex-shrink-0"
                           />
                         )}
@@ -129,9 +189,7 @@ export default function AdminTransactions() {
                       <div className="text-zinc-900 dark:text-zinc-100">
                         {tx.book?.author?.name || "-"}
                       </div>
-                      <div className="text-xs text-zinc-500">
-                        {tx.book?.genre?.name || "-"}
-                      </div>
+                      <div className="text-xs text-zinc-500">{tx.book?.genre?.name || "-"}</div>
                     </td>
                     <td className="px-6 py-4 font-semibold text-zinc-900 dark:text-zinc-100">
                       Rp {Number(tx.total_amount).toLocaleString("id-ID")}

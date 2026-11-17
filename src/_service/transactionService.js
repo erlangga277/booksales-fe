@@ -13,6 +13,10 @@ export const transactionService = {
     const res = await api.post("/transactions", payload);
     return res.data;
   },
+  simulatePaid: async (id) => {
+    const res = await api.post(`/transactions/${id}/simulate-paid`);
+    return res.data;
+  },
   delete: async (id) => {
     const res = await api.delete(`/transactions/${id}`);
     return res.data;

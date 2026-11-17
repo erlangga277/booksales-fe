@@ -1,8 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
 import { transactionService } from "../../_service/transactionService";
+
+const CART_PAYMENT_STORAGE_KEY = "pending_cart_payment";
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -10,7 +12,54 @@ export default function Cart() {
   const { cartItems, updateQuantity, removeFromCart, clearCart, totalPrice } =
     useCart();
   const [submitting, setSubmitting] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState(null);
+  const [orderData, setOrderData] = useState(null);
+  const [snapToken, setSnapToken] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState("pending");
+
+  const triggerSnapPay = useCallback((token, order) => {
+    if (!window.snap || !token) return;
+
+    window.snap.pay(token, {
+      onSuccess: async () => {
+        try {
+          const orderId = Array.isArray(order) ? order[0]?.id : order?.id;
+          if (orderId) {
+            await transactionService.simulatePaid(orderId);
+          }
+        } catch (err) {
+          console.error("Gagal sinkronisasi status pembayaran:", err);
+        } finally {
+          setPaymentStatus("success");
+          localStorage.removeItem(CART_PAYMENT_STORAGE_KEY);
+        }
+      },
+      onPending: () => {
+        setPaymentStatus("pending");
+      },
+      onError: () => {
+        alert("Pembayaran gagal. Silakan coba kembali.");
+      },
+      onClose: () => {},
+    });
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(CART_PAYMENT_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.status === "success") {
+          localStorage.removeItem(CART_PAYMENT_STORAGE_KEY);
+        } else if (parsed.order && parsed.token) {
+          setOrderData(parsed.order);
+          setSnapToken(parsed.token);
+          setPaymentStatus(parsed.status || "pending");
+        }
+      } catch {
+        localStorage.removeItem(CART_PAYMENT_STORAGE_KEY);
+      }
+    }
+  }, []);
 
   const getImageUrl = (path) => {
     if (!path)
@@ -39,18 +88,32 @@ export default function Cart() {
 
     try {
       setSubmitting(true);
-      // Buat transaksi untuk item-item di keranjang
-      const results = [];
-      for (const item of cartItems) {
-        const res = await transactionService.create({
-          book_id: item.id,
-          quantity: item.quantity,
-          total_amount: item.price * item.quantity,
-        });
-        results.push(res.data);
-      }
+      const itemsPayload = cartItems.map((item) => ({
+        book_id: item.id,
+        quantity: item.quantity,
+      }));
+
+      const res = await transactionService.create({
+        items: itemsPayload,
+      });
+
+      const responseData = res.data?.data || res.data;
+      const order = responseData?.order || responseData;
+      const token = responseData?.snap_token || order?.snap_token;
+
       clearCart();
-      setOrderSuccess(results);
+      setOrderData(order);
+      setSnapToken(token ?? null);
+      setPaymentStatus("pending");
+
+      localStorage.setItem(
+        CART_PAYMENT_STORAGE_KEY,
+        JSON.stringify({ order, token, status: "pending" })
+      );
+
+      if (token) {
+        triggerSnapPay(token, order);
+      }
     } catch (err) {
       alert(
         err.response?.data?.message ||
@@ -61,6 +124,13 @@ export default function Cart() {
     }
   };
 
+  const clearPendingSession = () => {
+    localStorage.removeItem(CART_PAYMENT_STORAGE_KEY);
+    setOrderData(null);
+    setSnapToken(null);
+    setPaymentStatus("pending");
+  };
+
   return (
     <section className="py-8 bg-white md:py-16 dark:bg-gray-900 antialiased min-h-[70vh]">
       <div className="max-w-screen-xl px-4 mx-auto 2xl:px-0">
@@ -68,25 +138,59 @@ export default function Cart() {
           Keranjang Belanja
         </h1>
 
-        {orderSuccess && (
-          <div className="mb-6 p-4 rounded-xl bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300">
-            <h4 className="font-semibold text-base mb-1">
-              Pesanan Anda Berhasil Diproses!
-            </h4>
-            <p className="text-sm mb-3">
-              Terima kasih telah berbelanja. Admin akan segera memverifikasi dan
-              mengirimkan buku Anda.
-            </p>
-            <Link
-              to="/books"
-              className="inline-block text-xs font-bold text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg"
-            >
-              Belanja Buku Lainnya
-            </Link>
+        {orderData && (
+          <div
+            className={`mb-6 p-5 rounded-2xl border ${
+              paymentStatus === "success"
+                ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
+                : "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200"
+            }`}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-bold text-base mb-1">
+                  {paymentStatus === "success"
+                    ? "Pembayaran Berhasil Dikonfirmasi!"
+                    : "Pesanan Dibuat — Selesaikan Pembayaran"}
+                </h4>
+                <p className="text-sm">
+                  Nomor pesanan:{" "}
+                  <span className="font-mono font-bold">
+                    {Array.isArray(orderData)
+                      ? orderData[0]?.order_number
+                      : orderData?.order_number}
+                  </span>
+                  .{" "}
+                  {paymentStatus === "success"
+                    ? "Transaksi Anda telah lunas dan pesanan sedang diproses."
+                    : "Pembayaran belum selesai sampai Anda menyelesaikannya di pop-up Midtrans."}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {paymentStatus !== "success" && snapToken && (
+                  <button
+                    type="button"
+                    onClick={() => triggerSnapPay(snapToken, orderData)}
+                    className="inline-flex items-center gap-2 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 px-4 py-2 rounded-xl transition"
+                  >
+                    Buka Kembali Halaman Bayar
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={clearPendingSession}
+                  className="text-xs px-3 py-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 underline"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        {cartItems.length === 0 && !orderSuccess ? (
+        {cartItems.length === 0 && !orderData ? (
           <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
             <svg
               className="w-16 h-16 mx-auto text-gray-400 mb-4"

@@ -8,6 +8,7 @@ export default function Register() {
     name: "",
     username: "",
     email: "",
+    phone: "",
     password: "",
     role: "customer",
   });
@@ -86,8 +87,11 @@ export default function Register() {
       if (res.token) {
         localStorage.setItem("token", res.token);
       }
-      if (res.data?.role) {
-        localStorage.setItem("role", res.data.role);
+      if (res.role || res.data?.role) {
+        localStorage.setItem("role", res.role || res.data.role);
+      }
+      if (res.user || res.data) {
+        localStorage.setItem("user", JSON.stringify(res.user || res.data));
       }
 
       // Karena role publik/customer, langsung arahkan ke beranda (/)
@@ -208,6 +212,32 @@ export default function Register() {
                 {fieldErrors.email && (
                   <p className="mt-1 text-xs text-red-500">
                     {Array.isArray(fieldErrors.email) ? fieldErrors.email[0] : fieldErrors.email}
+                  </p>
+                )}
+              </div>
+
+              {/* WhatsApp Phone */}
+              <div>
+                <label
+                  htmlFor="phone"
+                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
+                  Nomor WhatsApp
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  id="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className={`bg-gray-50 border ${
+                    fieldErrors.phone ? "border-red-500" : "border-gray-300"
+                  } text-gray-900 text-sm rounded-lg focus:ring-indigo-600 focus:border-indigo-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white`}
+                  placeholder="081234567890"
+                />
+                {fieldErrors.phone && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {Array.isArray(fieldErrors.phone) ? fieldErrors.phone[0] : fieldErrors.phone}
                   </p>
                 )}
               </div>

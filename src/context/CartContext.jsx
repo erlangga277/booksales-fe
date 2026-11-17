@@ -1,11 +1,15 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useAuth } from "./AuthContext";
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
+  const { user, isAuthenticated } = useAuth();
+  const cartKey = isAuthenticated && user?.id ? `cart_items_user_${user.id}` : "cart_items_guest";
+
   const [cartItems, setCartItems] = useState(() => {
     try {
-      const saved = localStorage.getItem("cart_items");
+      const saved = localStorage.getItem(cartKey);
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -13,10 +17,21 @@ export function CartProvider({ children }) {
   });
 
   useEffect(() => {
-    localStorage.setItem("cart_items", JSON.stringify(cartItems));
-  }, [cartItems]);
+    try {
+      const saved = localStorage.getItem(cartKey);
+      setCartItems(saved ? JSON.parse(saved) : []);
+    } catch {
+      setCartItems([]);
+    }
+  }, [cartKey]);
+
+  useEffect(() => {
+    localStorage.setItem(cartKey, JSON.stringify(cartItems));
+  }, [cartItems, cartKey]);
 
   const addToCart = (book, quantity = 1) => {
+    if (!isAuthenticated) return false;
+
     setCartItems((prevItems) => {
       const existing = prevItems.find((item) => item.id === book.id);
       const stock = Number(book.stock) || 0;
