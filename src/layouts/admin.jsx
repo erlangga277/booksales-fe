@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -184,10 +184,10 @@ export default function AdminLayout() {
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600 z-50 py-1">
                   <div className="py-2 px-4 border-b border-gray-100 dark:border-gray-600">
                     <span className="block text-sm font-semibold text-gray-900 dark:text-white">
-                      Administrator
+                      {user?.name || "Administrator"}
                     </span>
                     <span className="block text-xs text-gray-500 truncate dark:text-gray-400">
-                      admin@mail.com
+                      {user?.email || "admin@mail.com"}
                     </span>
                   </div>
                   <ul>

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { userService } from "../../../_service/userService";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function AdminUsers() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -24,7 +26,21 @@ export default function AdminUsers() {
 
   const handleRoleChange = async (user, newRole) => {
     if (user.role === newRole) return;
-    if (!window.confirm(`Ubah hak akses "${user.name}" menjadi "${newRole}"?`)) return;
+
+    // Proteksi di sisi klien jika mencoba mengubah role akun sendiri
+    if (
+      currentUser &&
+      (user.id === currentUser.id || user.email === currentUser.email)
+    ) {
+      alert("Tidak dapat mengubah role akun admin Anda sendiri.");
+      setUsers((prev) => [...prev]);
+      return;
+    }
+
+    if (!window.confirm(`Ubah hak akses "${user.name}" menjadi "${newRole}"?`)) {
+      setUsers((prev) => [...prev]);
+      return;
+    }
 
     setUpdatingId(user.id);
     try {
@@ -34,6 +50,7 @@ export default function AdminUsers() {
       );
     } catch (err) {
       alert(err.customMessage || "Gagal mengubah role pengguna.");
+      fetchUsers();
     } finally {
       setUpdatingId(null);
     }
@@ -115,51 +132,74 @@ export default function AdminUsers() {
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-zinc-900 dark:text-zinc-100">
-                        {user.name}
-                      </div>
-                      <div className="text-xs text-zinc-500">{user.email}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {user.email_verified_at ? (
-                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                          Terverifikasi
-                        </span>
-                      ) : (
-                        <span className="text-xs text-zinc-400">
-                          Belum Verifikasi
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 font-semibold text-zinc-900 dark:text-zinc-100">
-                      {user.transactions_count ?? 0} transaksi
-                    </td>
-                    <td className="px-6 py-4 text-xs text-zinc-500">
-                      {formatDate(user.last_access)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <select
-                        disabled={updatingId === user.id}
-                        value={user.role}
-                        onChange={(e) => handleRoleChange(user, e.target.value)}
-                        className={`text-xs font-semibold rounded-lg px-2.5 py-1 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 cursor-pointer ${
-                          user.role === "admin"
-                            ? "text-purple-600 dark:text-purple-400"
-                            : "text-blue-600 dark:text-blue-400"
-                        }`}
-                      >
-                        <option value="customer">Customer</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))
+                filteredUsers.map((user) => {
+                  const isCurrentUser =
+                    currentUser &&
+                    (user.id === currentUser.id || user.email === currentUser.email);
+
+                  return (
+                    <tr
+                      key={user.id}
+                      className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                            {user.name}
+                          </span>
+                          {isCurrentUser && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                              Anda
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-zinc-500">{user.email}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {user.email_verified_at ? (
+                          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            Terverifikasi
+                          </span>
+                        ) : (
+                          <span className="text-xs text-zinc-400">
+                            Belum Verifikasi
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 font-semibold text-zinc-900 dark:text-zinc-100">
+                        {user.transactions_count ?? 0} transaksi
+                      </td>
+                      <td className="px-6 py-4 text-xs text-zinc-500">
+                        {formatDate(user.last_access)}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {isCurrentUser ? (
+                          <div className="inline-flex items-center" title="Tidak dapat mengubah role akun admin Anda sendiri">
+                            <span
+                              className="text-xs font-semibold rounded-lg px-2.5 py-1 border border-purple-200 dark:border-purple-800/60 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 opacity-80 cursor-not-allowed select-none"
+                            >
+                              Admin
+                            </span>
+                          </div>
+                        ) : (
+                          <select
+                            disabled={updatingId === user.id}
+                            value={user.role}
+                            onChange={(e) => handleRoleChange(user, e.target.value)}
+                            className={`text-xs font-semibold rounded-lg px-2.5 py-1 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 cursor-pointer disabled:opacity-50 ${
+                              user.role === "admin"
+                                ? "text-purple-600 dark:text-purple-400"
+                                : "text-blue-600 dark:text-blue-400"
+                            }`}
+                          >
+                            <option value="customer">Customer</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
