@@ -64,7 +64,10 @@ export default function AdminTransactions() {
     const matchSearch =
       (tx.customer?.name || "").toLowerCase().includes(q) ||
       (tx.customer?.email || "").toLowerCase().includes(q) ||
-      (tx.order_number || "").toLowerCase().includes(q);
+      (tx.order_number || "").toLowerCase().includes(q) ||
+      (tx.book?.title || "").toLowerCase().includes(q) ||
+      (tx.book?.author?.name || "").toLowerCase().includes(q) ||
+      (tx.book?.genre?.name || "").toLowerCase().includes(q);
     const matchStatus =
       statusFilter === "all" ||
       tx.status === statusFilter ||

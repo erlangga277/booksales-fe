@@ -1,28 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { authService } from "../_service/authService";
+import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { totalItemsCount } = useCart();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState(null);
+  const { isAuthenticated, role, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Periksa status login setiap kali rute berpindah
-  useEffect(() => {
-    const token = authService.getToken();
-    const role = authService.getRole();
-    setIsLoggedIn(!!token);
-    setUserRole(role);
-  }, [location]);
-
   const handleLogout = async () => {
-    await authService.logout();
-    setIsLoggedIn(false);
-    setUserRole(null);
+    await logout();
     navigate("/login");
   };
 
@@ -65,15 +54,15 @@ export default function Navbar() {
               )}
             </Link>
 
-            {isLoggedIn ? (
+            {isAuthenticated ? (
               <div className="flex items-center gap-3">
                 {/* Badge Role */}
                 <span className="hidden sm:inline-block px-2.5 py-1 text-xs font-semibold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800">
-                  {userRole === "admin" ? "Administrator" : "Customer"}
+                  {role === "admin" ? "Administrator" : "Customer"}
                 </span>
 
                 {/* Shortcut ke Admin jika admin */}
-                {userRole === "admin" && (
+                {role === "admin" && (
                   <Link
                     to="/admin"
                     className="text-xs sm:text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition"

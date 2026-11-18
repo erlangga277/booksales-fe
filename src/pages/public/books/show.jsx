@@ -310,13 +310,20 @@ export default function ShowBook() {
             <div className="flex items-center gap-3 my-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
               <img
                 src={
-                  book.author?.photo ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    book.author?.name || "Author"
-                  )}&background=6366f1&color=fff`
+                  book.author?.photo
+                    ? getImageUrl(book.author.photo)
+                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                        book.author?.name || "Author"
+                      )}&background=6366f1&color=fff`
                 }
-                alt={book.author?.name}
-                className="w-10 h-10 rounded-full object-cover"
+                alt={book.author?.name || "Penulis"}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    book.author?.name || "Author"
+                  )}&background=6366f1&color=fff`;
+                }}
+                className="w-10 h-10 rounded-full object-cover border border-zinc-200 dark:border-zinc-700"
               />
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Penulis</p>
@@ -449,6 +456,33 @@ export default function ShowBook() {
               >
                 ← Katalog
               </Link>
+            </div>
+
+            <div className="mt-5 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.8"
+                    d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"
+                  />
+                </svg>
+              </div>
+              <div className="text-xs">
+                <span className="font-semibold text-zinc-900 dark:text-zinc-100 block">
+                  Estimasi Tiba: 5 Hari Kerja (
+                  {new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString("id-ID", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  })}
+                  )
+                </span>
+                <span className="text-zinc-500 dark:text-zinc-400">
+                  Pesanan diproses langsung dan dikirim menggunakan kurir reguler.
+                </span>
+              </div>
             </div>
 
             <hr className="my-6 border-gray-200 dark:border-gray-800" />

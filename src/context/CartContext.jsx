@@ -5,9 +5,10 @@ const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const { user, isAuthenticated } = useAuth();
-  const cartKey = isAuthenticated && user?.id ? `cart_items_user_${user.id}` : "cart_items_guest";
+  const cartKey = isAuthenticated && user?.id ? `cart_items_user_${user.id}` : null;
 
   const [cartItems, setCartItems] = useState(() => {
+    if (!cartKey) return [];
     try {
       const saved = localStorage.getItem(cartKey);
       return saved ? JSON.parse(saved) : [];
@@ -17,16 +18,22 @@ export function CartProvider({ children }) {
   });
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(cartKey);
-      setCartItems(saved ? JSON.parse(saved) : []);
-    } catch {
+    if (cartKey) {
+      try {
+        const saved = localStorage.getItem(cartKey);
+        setCartItems(saved ? JSON.parse(saved) : []);
+      } catch {
+        setCartItems([]);
+      }
+    } else {
       setCartItems([]);
     }
   }, [cartKey]);
 
   useEffect(() => {
-    localStorage.setItem(cartKey, JSON.stringify(cartItems));
+    if (cartKey) {
+      localStorage.setItem(cartKey, JSON.stringify(cartItems));
+    }
   }, [cartItems, cartKey]);
 
   const addToCart = (book, quantity = 1) => {
@@ -75,7 +82,12 @@ export function CartProvider({ children }) {
     setCartItems((prevItems) => prevItems.filter((item) => item.id !== bookId));
   };
 
-  const clearCart = () => setCartItems([]);
+  const clearCart = () => {
+    setCartItems([]);
+    if (cartKey) {
+      localStorage.removeItem(cartKey);
+    }
+  };
 
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
   const totalPrice = cartItems.reduce(

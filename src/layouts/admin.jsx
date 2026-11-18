@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
-import { authService } from "../_service/authService";
+import { useAuth } from "../context/AuthContext";
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
-    await authService.logout();
+    await logout();
     navigate("/login");
   };
 
