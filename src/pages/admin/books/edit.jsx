@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { bookService } from "../../../_service/bookService";
 import { genreService } from "../../../_service/genreService";
 import { authorService } from "../../../_service/authorService";
+import { getImageUrl } from "../../../_utils/image";
 
 export default function BookEdit() {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ export default function BookEdit() {
   const [authors, setAuthors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [currentCover, setCurrentCover] = useState(null);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -18,7 +21,7 @@ export default function BookEdit() {
     stock: "",
     genre_id: "",
     author_id: "",
-    cover_photo: "",
+    cover_photo: null,
   });
 
   useEffect(() => {
@@ -38,8 +41,11 @@ export default function BookEdit() {
           stock: book.stock || "",
           genre_id: book.genre_id || "",
           author_id: book.author_id || "",
-          cover_photo: book.cover_photo || "",
+          cover_photo: null,
         });
+        if (book.cover_photo) {
+          setCurrentCover(book.cover_photo_url || getImageUrl(book.cover_photo));
+        }
         setGenres(genreData.data || genreData);
         setAuthors(authorData.data || authorData);
       } catch (err) {
@@ -55,11 +61,36 @@ export default function BookEdit() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setForm({ ...form, cover_photo: file });
+      setPreviewImage(URL.createObjectURL(file));
+    }
+  };
+
+  const handleRemoveNewImage = () => {
+    setForm({ ...form, cover_photo: null });
+    setPreviewImage(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
-      await bookService.update(id, form);
+
+      const formData = new FormData();
+      formData.append("title", form.title);
+      formData.append("description", form.description || "");
+      formData.append("price", form.price);
+      formData.append("stock", form.stock);
+      formData.append("genre_id", form.genre_id);
+      formData.append("author_id", form.author_id);
+      if (form.cover_photo) {
+        formData.append("cover_photo", form.cover_photo);
+      }
+
+      await bookService.update(id, formData);
       navigate("/admin/books");
     } catch (err) {
       console.error("Gagal mengupdate buku:", err);
@@ -93,7 +124,6 @@ export default function BookEdit() {
         </div>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 mb-4 sm:grid-cols-2 sm:gap-6 sm:mb-5">
-            {/* Judul */}
             <div className="sm:col-span-2">
               <label
                 htmlFor="title"
@@ -113,7 +143,6 @@ export default function BookEdit() {
               />
             </div>
 
-            {/* Genre */}
             <div>
               <label
                 htmlFor="genre_id"
@@ -138,7 +167,6 @@ export default function BookEdit() {
               </select>
             </div>
 
-            {/* Author */}
             <div>
               <label
                 htmlFor="author_id"
@@ -163,7 +191,6 @@ export default function BookEdit() {
               </select>
             </div>
 
-            {/* Harga */}
             <div>
               <label
                 htmlFor="price"
@@ -183,7 +210,6 @@ export default function BookEdit() {
               />
             </div>
 
-            {/* Stok */}
             <div>
               <label
                 htmlFor="stock"
@@ -203,26 +229,50 @@ export default function BookEdit() {
               />
             </div>
 
-            {/* Cover Photo */}
             <div className="sm:col-span-2">
               <label
                 htmlFor="cover_photo"
                 className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
               >
-                Cover Photo (nama file)
+                Cover Photo (Upload Gambar)
               </label>
               <input
-                type="text"
+                type="file"
                 name="cover_photo"
                 id="cover_photo"
-                value={form.cover_photo}
-                onChange={handleChange}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-600 focus:border-indigo-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder="Contoh: harry_potter.jpg"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-l-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
               />
+
+              {previewImage ? (
+                <div className="mt-3 relative inline-block">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Preview Gambar Baru:</p>
+                  <img
+                    src={previewImage}
+                    alt="Preview Cover Baru"
+                    className="w-32 h-44 object-cover rounded-lg border border-gray-200 shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveNewImage}
+                    className="mt-2 text-xs text-red-600 hover:underline block"
+                  >
+                    Batal pilih gambar baru
+                  </button>
+                </div>
+              ) : currentCover ? (
+                <div className="mt-3">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cover Saat Ini:</p>
+                  <img
+                    src={currentCover}
+                    alt="Current Cover"
+                    className="w-32 h-44 object-cover rounded-lg border border-gray-200 shadow-sm"
+                  />
+                </div>
+              ) : null}
             </div>
 
-            {/* Deskripsi */}
             <div className="sm:col-span-2">
               <label
                 htmlFor="description"

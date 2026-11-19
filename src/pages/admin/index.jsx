@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../../_api/axios";
 import { genreService } from "../../_service/genreService";
 import { authorService } from "../../_service/authorService";
+import { userService } from "../../_service/userService";
 import { getImageUrl } from "../../_utils/image";
 
 function RevenueChart({ data }) {
@@ -121,6 +122,7 @@ export default function Dashboard() {
     totalBooks: 0,
     totalAuthors: 0,
     totalGenres: 0,
+    totalUsers: 0,
     totalTransactions: 0,
     totalOmset: 0,
     allTransactions: [],
@@ -134,12 +136,13 @@ export default function Dashboard() {
     try {
       if (isInitial) setLoading(true);
 
-      const [booksRes, genresRes, authorsRes, transactionsRes] =
+      const [booksRes, genresRes, authorsRes, transactionsRes, usersRes] =
         await Promise.allSettled([
           api.get("/books"),
           genreService.getAll(),
           authorService.getAll(),
           api.get("/transactions"),
+          userService.getAll(),
         ]);
 
       if (!isMountedRef.current) return;
@@ -160,8 +163,11 @@ export default function Dashboard() {
         transactionsRes.status === "fulfilled"
           ? transactionsRes.value?.data?.data || []
           : [];
+      const usersData =
+        usersRes.status === "fulfilled"
+          ? usersRes.value?.data || []
+          : [];
 
-      // Gateway returns settlement for confirmed Midtrans captures.
       const paidTransactions = transactionsData.filter(
         (tx) => tx.status === "paid" || tx.status === "settlement"
       );
@@ -175,6 +181,7 @@ export default function Dashboard() {
         totalBooks: booksData.length,
         totalAuthors: authorsData.length,
         totalGenres: genresData.length,
+        totalUsers: usersData.length,
         totalTransactions: transactionsData.length,
         totalOmset: omset,
         allTransactions: transactionsData,
@@ -195,11 +202,19 @@ export default function Dashboard() {
 
     const intervalId = setInterval(() => {
       fetchDashboardData(false);
-    }, 15000);
+    }, 5000);
+
+    const onStorageChange = (e) => {
+      if (e.key === "booksales_new_user_registered") {
+        fetchDashboardData(false);
+      }
+    };
+    window.addEventListener("storage", onStorageChange);
 
     return () => {
       isMountedRef.current = false;
       clearInterval(intervalId);
+      window.removeEventListener("storage", onStorageChange);
     };
   }, []);
 
@@ -235,6 +250,12 @@ export default function Dashboard() {
 
   const metricCards = [
     {
+      title: "Total Pengguna",
+      value: stats.totalUsers,
+      sub: "Pengguna terdaftar",
+      to: "/admin/users",
+    },
+    {
       title: "Total Judul Buku",
       value: stats.totalBooks,
       sub: "Judul dalam katalog",
@@ -268,7 +289,7 @@ export default function Dashboard() {
             Dashboard Toko
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-            Kondisi katalog buku dan data transaksi saat ini
+            Kondisi katalog buku, pengguna, dan data transaksi saat ini
           </p>
         </div>
 
@@ -281,7 +302,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {metricCards.map((card, idx) => (
           <Link
             key={idx}

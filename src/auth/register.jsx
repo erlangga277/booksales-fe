@@ -94,7 +94,8 @@ export default function Register() {
         localStorage.setItem("user", JSON.stringify(res.user || res.data));
       }
 
-      // Karena role publik/customer, langsung arahkan ke beranda (/)
+      localStorage.setItem("booksales_new_user_registered", Date.now().toString());
+
       navigate("/");
     } catch (err) {
       console.error("Register error:", err);

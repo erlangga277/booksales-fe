@@ -242,37 +242,55 @@ export default function AdminAuthors() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 max-w-md w-full shadow-2xl">
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-4">
-              {modalMode === "create" ? "Tambah Penulis" : "Edit Penulis"}
-            </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-zinc-900 text-zinc-100 rounded-2xl border border-zinc-800 p-6 sm:p-7 max-w-lg w-full shadow-2xl">
+            <div className="flex items-center justify-between pb-4 mb-5 border-b border-zinc-800/80">
+              <div>
+                <h3 className="text-xl font-bold tracking-tight text-white">
+                  {modalMode === "create" ? "Tambah Penulis" : "Edit Penulis"}
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  {modalMode === "create"
+                    ? "Lengkapi informasi penulis baru di bawah ini."
+                    : "Perbarui profil dan biodata penulis."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-zinc-800 transition"
+              >
+                ✕
+              </button>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Nama Penulis
+                <label className="block text-xs font-medium text-zinc-300 mb-1.5">
+                  Nama Penulis <span className="text-rose-500">*</span>
                 </label>
                 <input
                   required
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-white"
+                  placeholder="Contoh: Andrea Hirata"
+                  className="w-full bg-zinc-800/70 border border-zinc-700/80 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+                <label className="block text-xs font-medium text-zinc-300 mb-1.5">
                   Foto Penulis
                 </label>
-                <div className="flex gap-2 mb-2">
+                <div className="inline-flex p-1 bg-zinc-800/80 rounded-xl border border-zinc-700/60 mb-3">
                   <button
                     type="button"
                     onClick={() => setPhotoType("file")}
-                    className={`text-xs px-3 py-1 rounded-md border transition ${
+                    className={`text-xs font-medium px-3.5 py-1.5 rounded-lg transition ${
                       photoType === "file"
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-transparent hover:border-zinc-300"
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
                     Upload File
@@ -280,10 +298,10 @@ export default function AdminAuthors() {
                   <button
                     type="button"
                     onClick={() => setPhotoType("url")}
-                    className={`text-xs px-3 py-1 rounded-md border transition ${
+                    className={`text-xs font-medium px-3.5 py-1.5 rounded-lg transition ${
                       photoType === "url"
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-transparent hover:border-zinc-300"
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
                     URL Gambar
@@ -291,12 +309,14 @@ export default function AdminAuthors() {
                 </div>
 
                 {photoType === "file" ? (
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="w-full text-xs text-zinc-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                  />
+                  <div className="border border-dashed border-zinc-700 hover:border-zinc-500 bg-zinc-800/40 rounded-xl p-3 transition">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="block w-full text-xs text-zinc-400 file:mr-3 file:py-2 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 file:cursor-pointer cursor-pointer"
+                    />
+                  </div>
                 ) : (
                   <input
                     type="url"
@@ -305,47 +325,53 @@ export default function AdminAuthors() {
                       setForm({ ...form, photo: e.target.value });
                       setPreviewUrl(e.target.value);
                     }}
-                    placeholder="https://..."
-                    className="w-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-white"
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full bg-zinc-800/70 border border-zinc-700/80 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition"
                   />
                 )}
 
                 {previewUrl && (
-                  <div className="mt-2.5 flex items-center gap-2">
+                  <div className="mt-3 flex items-center gap-3 p-2.5 rounded-xl bg-zinc-800/50 border border-zinc-800">
                     <img
                       src={previewUrl}
                       alt="Preview"
-                      className="w-12 h-12 rounded-full object-cover border border-zinc-200 dark:border-zinc-700 shadow-sm"
+                      className="w-12 h-12 rounded-full object-cover border-2 border-indigo-500/50 shadow-md"
                     />
-                    <span className="text-xs text-zinc-500">Preview foto</span>
+                    <div className="text-xs">
+                      <p className="font-medium text-zinc-200">
+                        {photoFile ? photoFile.name : "Foto Terpilih"}
+                      </p>
+                      <p className="text-zinc-500">Preview foto penulis</p>
+                    </div>
                   </div>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-medium text-zinc-300 mb-1.5">
                   Biografi Singkat
                 </label>
                 <textarea
                   rows="3"
                   value={form.bio}
                   onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                  className="w-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-white"
+                  placeholder="Tuliskan biografi singkat tentang penulis..."
+                  className="w-full bg-zinc-800/70 border border-zinc-700/80 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 outline-none transition resize-y"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end items-center gap-2.5 pt-3 border-t border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg"
+                  className="px-4 py-2 text-xs font-semibold text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+                  className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-sm transition disabled:opacity-50"
                 >
                   {submitting ? "Menyimpan..." : "Simpan"}
                 </button>

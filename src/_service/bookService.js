@@ -17,6 +17,14 @@ export const bookService = {
     return res.data;
   },
   update: async (id, payload) => {
+    const isFormData = payload instanceof FormData;
+    if (isFormData) {
+      payload.append("_method", "PUT");
+      const res = await api.post(`/books/${id}`, payload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data;
+    }
     const res = await api.put(`/books/${id}`, payload);
     return res.data;
   },
