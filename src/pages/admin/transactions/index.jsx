@@ -61,13 +61,23 @@ export default function AdminTransactions() {
 
   const filtered = transactions.filter((tx) => {
     const q = search.toLowerCase();
+    const itemsMatch = (tx.items || []).some((item) => {
+      const book = item.book;
+      return (
+        (book?.title || "").toLowerCase().includes(q) ||
+        (book?.author?.name || "").toLowerCase().includes(q) ||
+        (book?.genre?.name || "").toLowerCase().includes(q)
+      );
+    });
+
     const matchSearch =
       (tx.customer?.name || "").toLowerCase().includes(q) ||
       (tx.customer?.email || "").toLowerCase().includes(q) ||
       (tx.order_number || "").toLowerCase().includes(q) ||
       (tx.book?.title || "").toLowerCase().includes(q) ||
       (tx.book?.author?.name || "").toLowerCase().includes(q) ||
-      (tx.book?.genre?.name || "").toLowerCase().includes(q);
+      (tx.book?.genre?.name || "").toLowerCase().includes(q) ||
+      itemsMatch;
     const matchStatus =
       statusFilter === "all" ||
       tx.status === statusFilter ||
@@ -171,28 +181,73 @@ export default function AdminTransactions() {
                       <div className="text-xs text-zinc-500">{tx.customer?.email || "-"}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        {tx.book?.cover_photo && (
-                          <img
-                            src={getImageUrl(tx.book.cover_photo)}
-                            alt=""
-                            onError={(e) => {
-                              e.target.src =
-                                "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&q=80";
-                            }}
-                            className="w-8 h-10 object-cover rounded shadow-sm flex-shrink-0"
-                          />
-                        )}
-                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                          {tx.book?.title || `Buku ID #${tx.book_id}`}
-                        </span>
-                      </div>
+                      {tx.items && tx.items.length > 0 ? (
+                        <div className="space-y-2">
+                          {tx.items.map((item, idx) => (
+                            <div key={item.id || idx} className="flex items-center gap-2.5">
+                              {item.book?.cover_photo && (
+                                <img
+                                  src={getImageUrl(item.book.cover_photo)}
+                                  alt=""
+                                  onError={(e) => {
+                                    e.target.src =
+                                      "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&q=80";
+                                  }}
+                                  className="w-7 h-9 object-cover rounded shadow-xs shrink-0"
+                                />
+                              )}
+                              <div>
+                                <span className="font-medium text-zinc-900 dark:text-zinc-100 block">
+                                  {item.book?.title || `Buku ID #${item.book_id}`}
+                                </span>
+                                <span className="text-[11px] text-zinc-500">
+                                  {item.quantity}x @ Rp {Number(item.price).toLocaleString("id-ID")}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          {tx.book?.cover_photo && (
+                            <img
+                              src={getImageUrl(tx.book.cover_photo)}
+                              alt=""
+                              onError={(e) => {
+                                e.target.src =
+                                  "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&q=80";
+                              }}
+                              className="w-8 h-10 object-cover rounded shadow-sm flex-shrink-0"
+                            />
+                          )}
+                          <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                            {tx.book?.title || `Buku ID #${tx.book_id}`}
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-zinc-900 dark:text-zinc-100">
-                        {tx.book?.author?.name || "-"}
-                      </div>
-                      <div className="text-xs text-zinc-500">{tx.book?.genre?.name || "-"}</div>
+                      {tx.items && tx.items.length > 0 ? (
+                        <div className="space-y-2">
+                          {tx.items.map((item, idx) => (
+                            <div key={item.id || idx} className="text-xs">
+                              <div className="font-medium text-zinc-900 dark:text-zinc-100">
+                                {item.book?.author?.name || "-"}
+                              </div>
+                              <div className="text-[11px] text-zinc-500">
+                                {item.book?.genre?.name || "-"}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="text-zinc-900 dark:text-zinc-100">
+                            {tx.book?.author?.name || "-"}
+                          </div>
+                          <div className="text-xs text-zinc-500">{tx.book?.genre?.name || "-"}</div>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 font-semibold text-zinc-900 dark:text-zinc-100">
                       Rp {Number(tx.total_amount).toLocaleString("id-ID")}
