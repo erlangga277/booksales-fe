@@ -83,12 +83,12 @@ export default function Register() {
     try {
       const res = await authService.register(formData);
 
-      // Simpan session token & role jika backend mengembalikan token
+      // Simpan token & data user ke localStorage
       if (res.token) {
         localStorage.setItem("token", res.token);
       }
       if (res.role || res.data?.role) {
-        localStorage.setItem("role", res.role || res.data.role);
+        localStorage.setItem("role", res.role || res.data?.role);
       }
       if (res.user || res.data) {
         localStorage.setItem("user", JSON.stringify(res.user || res.data));
@@ -96,7 +96,9 @@ export default function Register() {
 
       localStorage.setItem("booksales_new_user_registered", Date.now().toString());
 
-      navigate("/");
+      // Reload penuh agar AuthContext membaca ulang localStorage dan state user aktif,
+      // sehingga checkout & kirim pesan langsung bisa digunakan tanpa login ulang
+      window.location.href = "/";
     } catch (err) {
       console.error("Register error:", err);
       if (err.response?.data?.errors) {
